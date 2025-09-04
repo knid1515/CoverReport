@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมสร้างปกรายงาน</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Sarabun for Thai) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <!-- html2canvas library for downloading the element as an image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        /* A4 aspect ratio for preview */
+        .a4-aspect {
+            aspect-ratio: 210 / 297;
+        }
+        /* Ensure background images cover the container */
+        .cover-background {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Main container -->
+    <div class="container mx-auto p-4 lg:p-8">
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2">
+                
+                <!-- Controls Panel -->
+                <div class="p-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">สร้างปกรายงาน</h1>
+                    <p class="text-gray-500 mb-8">กรอกข้อมูล เลือกพื้นหลัง และลากข้อความเพื่อจัดตำแหน่ง</p>
+                    
+                    <div class="space-y-6">
+                        <!-- Name Input -->
+                        <div>
+                            <label for="studentName" class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-สกุล</label>
+                            <input type="text" id="studentName" placeholder="เช่น นายใจดี มีสุข" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        </div>
+                        
+                        <!-- Report Topic Input -->
+                        <div>
+                            <label for="reportTopic" class="block text-sm font-medium text-gray-700 mb-1">เรื่อง</label>
+                            <input type="text" id="reportTopic" placeholder="เช่น เทคโนโลยีสารสนเทศ" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        </div>
+
+                        <!-- Position Selector -->
+                        <div>
+                            <label for="studentPosition" class="block text-sm font-medium text-gray-700 mb-1">ตำแหน่ง</label>
+                            <select id="studentPosition" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white">
+                                <option>ครูผู้ช่วย</option>
+                                <option>ครู</option>
+                                <option>ครูชำนาญการ</option>
+                                <option>ครูชำนาญการพิเศษ</option>
+                            </select>
+                        </div>
+
+                        <!-- Class/Room Selector -->
+                        <div>
+                            <label for="studentClass" class="block text-sm font-medium text-gray-700 mb-1">ชั้น/ห้อง</label>
+                            <select id="studentClass" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition bg-white">
+                                <option>ชั้นประถมศึกษาปีที่ 1/1</option>
+                                <option>ชั้นประถมศึกษาปีที่ 1/2</option>
+                                <option>ชั้นประถมศึกษาปีที่ 1/3</option>
+                                <option>ชั้นประถมศึกษาปีที่ 2/1</option>
+                                <option>ชั้นประถมศึกษาปีที่ 2/2</option>
+                                <option>ชั้นประถมศึกษาปีที่ 2/3</option>
+                                <option>ชั้นประถมศึกษาปีที่ 3/1</option>
+                                <option>ชั้นประถมศึกษาปีที่ 3/2</option>
+                                <option>ชั้นประถมศึกษาปีที่ 3/3</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Background Selector -->
+                        <div>
+                             <label class="block text-sm font-medium text-gray-700 mb-2">เลือกพื้นหลัง</label>
+                             <div id="background-selector" class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                <!-- Background options will be injected here by JavaScript -->
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Panel -->
+                <div class="bg-gray-200 p-8 flex items-center justify-center relative min-h-[500px] lg:min-h-0">
+                    <!-- Download Button -->
+                    <button id="downloadBtn" title="ดาวน์โหลดปกรายงาน" class="absolute top-4 right-4 bg-white text-blue-600 w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-50 hover:scale-110 active:scale-95 transition-transform">
+                        <!-- Download Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- Report Cover Preview -->
+                    <div id="report-cover-preview" class="w-full max-w-md a4-aspect bg-white shadow-xl rounded-lg overflow-hidden relative cover-background transition-all duration-300">
+                        <div class="absolute inset-0 bg-black bg-opacity-10"></div>
+                        <div id="preview-content-area" class="relative z-10 h-full w-full text-center text-white" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">
+                           
+                            <!-- Draggable Elements -->
+                            <div id="draggable-main-header" class="absolute cursor-move p-2" style="top: 15%; left: 50%; transform: translateX(-50%); width: 90%;">
+                                <h2 class="text-4xl font-bold">รายงาน</h2>
+                            </div>
+
+                            <div id="draggable-topic" class="absolute cursor-move p-2" style="top: 25%; left: 50%; transform: translateX(-50%); width: 90%;">
+                                <p class="text-2xl" id="preview-topic">เรื่อง เทคโนโลยีสารสนเทศ</p>
+                            </div>
+
+                            <div id="draggable-name" class="absolute cursor-move p-2" style="top: 70%; left: 50%; transform: translateX(-50%); width: 90%;">
+                                <p class="text-xl font-bold" id="preview-name">นายใจดี มีสุข</p>
+                            </div>
+
+                            <div id="draggable-position" class="absolute cursor-move p-2" style="top: 78%; left: 50%; transform: translateX(-50%); width: 90%;">
+                                <p class="text-lg" id="preview-position">ครูผู้ช่วย</p>
+                            </div>
+
+                            <div id="draggable-class" class="absolute cursor-move p-2" style="top: 86%; left: 50%; transform: translateX(-50%); width: 90%;">
+                                <p class="text-lg" id="preview-class">ชั้นประถมศึกษาปีที่ 1/1</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
+    </div>
+
+    <!-- Popup Notification -->
+    <div id="popup" class="hidden fixed bottom-5 right-5 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl transition-transform translate-y-20">
+        <p id="popup-message">ดาวน์โหลดสำเร็จ!</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DOM Elements ---
+            const studentNameInput = document.getElementById('studentName');
+            const reportTopicInput = document.getElementById('reportTopic');
+            const studentPositionSelect = document.getElementById('studentPosition');
+            const studentClassSelect = document.getElementById('studentClass');
+            const backgroundSelector = document.getElementById('background-selector');
+
+            const previewName = document.getElementById('preview-name');
+            const previewTopic = document.getElementById('preview-topic');
+            const previewPosition = document.getElementById('preview-position');
+            const previewClass = document.getElementById('preview-class');
+            const previewCover = document.getElementById('report-cover-preview');
+
+            const downloadBtn = document.getElementById('downloadBtn');
+            const loadingIndicator = document.getElementById('loading');
+            const popup = document.getElementById('popup');
+            const popupMessage = document.getElementById('popup-message');
+
+            // --- Background Images ---
+            const backgrounds = [
+                { id: 'bg1', thumb: 'https://placehold.co/100x150/a3e635/ffffff?text=BG+1', full: 'https://images.unsplash.com/photo-1532274402911-5a369e4c4bb5?q=80&w=2070&auto=format&fit=crop' },
+                { id: 'bg2', thumb: 'https://placehold.co/100x150/38bdf8/ffffff?text=BG+2', full: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop' },
+                { id: 'bg3', thumb: 'https://placehold.co/100x150/f87171/ffffff?text=BG+3', full: 'https://images.unsplash.com/photo-1507525428034-b723a9ce6890?q=80&w=2070&auto=format&fit=crop' },
+                { id: 'bg4', thumb: 'https://placehold.co/100x150/fbbf24/ffffff?text=BG+4', full: 'https://images.unsplash.com/photo-1553095066-5014bc7b7f2d?q=80&w=2071&auto=format&fit=crop' },
+                { id: 'bg5', thumb: 'https://placehold.co/100x150/4ade80/ffffff?text=BG+5', full: 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?q=80&w=2070&auto=format&fit=crop' },
+                { id: 'bg6', thumb: 'https://placehold.co/100x150/c084fc/ffffff?text=BG+6', full: 'https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=1920&auto=format&fit=crop' },
+                { id: 'bg7', thumb: 'https://placehold.co/100x150/94a3b8/ffffff?text=BG+7', full: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop' },
+                { id: 'bg8', thumb: 'https://placehold.co/100x150/2dd4bf/ffffff?text=BG+8', full: 'https://images.unsplash.com/photo-1487147264018-f937fba0c817?q=80&w=1935&auto=format&fit=crop' },
+            ];
+            
+            let selectedBackground = backgrounds[0].full;
+
+            // --- Functions ---
+
+            // Function to render background choices
+            function renderBackgrounds() {
+                backgroundSelector.innerHTML = '';
+                backgrounds.forEach((bg, index) => {
+                    const div = document.createElement('div');
+                    div.className = `relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${index === 0 ? 'ring-4 ring-blue-500' : 'ring-2 ring-transparent hover:ring-blue-400'}`;
+                    div.dataset.bgUrl = bg.full;
+                    div.dataset.bgId = bg.id;
+
+                    const img = document.createElement('img');
+                    img.src = bg.thumb;
+                    img.alt = `Background ${index + 1}`;
+                    img.className = 'w-full h-full object-cover';
+                    // Fallback for placeholder images
+                    img.onerror = () => { img.src = 'https://placehold.co/100x150/cccccc/ffffff?text=Error'; };
+
+
+                    div.appendChild(img);
+                    backgroundSelector.appendChild(div);
+                });
+            }
+
+            // Function to update the preview
+            function updatePreview() {
+                // Update text
+                previewName.textContent = studentNameInput.value || "ชื่อ-สกุล";
+                previewTopic.textContent = "เรื่อง " + (reportTopicInput.value || "เทคโนโลยีสารสนเทศ");
+                previewPosition.textContent = studentPositionSelect.value;
+                previewClass.textContent = studentClassSelect.value;
+                
+                // Update background
+                previewCover.style.backgroundImage = `url('${selectedBackground}')`;
+            }
+            
+            // Function to make an element draggable
+            function makeElementDraggable(element, container) {
+                let active = false;
+                let startX, startY, startLeft, startTop;
+
+                const dragStart = (e) => {
+                    active = true;
+                    element.classList.remove('transition-all'); // Prevent smooth transition during drag
+                    
+                    const containerRect = container.getBoundingClientRect();
+                    const elemRect = element.getBoundingClientRect();
+                    startLeft = elemRect.left - containerRect.left;
+                    startTop = elemRect.top - containerRect.top;
+                    
+                    element.style.transform = 'none';
+                    element.style.bottom = ''; 
+                    element.style.left = `${startLeft}px`;
+                    element.style.top = `${startTop}px`;
+                    
+                    if (e.type === 'touchstart') {
+                        startX = e.touches[0].clientX;
+                        startY = e.touches[0].clientY;
+                    } else {
+                        startX = e.clientX;
+                        startY = e.clientY;
+                    }
+                    
+                    document.addEventListener('mousemove', dragMove);
+                    document.addEventListener('touchmove', dragMove, { passive: false });
+                    document.addEventListener('mouseup', dragEnd);
+                    document.addEventListener('touchend', dragEnd);
+                };
+
+                const dragMove = (e) => {
+                    if (!active) return;
+                    e.preventDefault();
+
+                    let currentX, currentY;
+                    if (e.type === 'touchmove') {
+                        currentX = e.touches[0].clientX;
+                        currentY = e.touches[0].clientY;
+                    } else {
+                        currentX = e.clientX;
+                        currentY = e.clientY;
+                    }
+
+                    const deltaX = currentX - startX;
+                    const deltaY = currentY - startY;
+                    let newLeft = startLeft + deltaX;
+                    let newTop = startTop + deltaY;
+                    
+                    const maxLeft = container.clientWidth - element.offsetWidth;
+                    const maxTop = container.clientHeight - element.offsetHeight;
+                    
+                    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                    newTop = Math.max(0, Math.min(newTop, maxTop));
+                    
+                    element.style.left = `${newLeft}px`;
+                    element.style.top = `${newTop}px`;
+                };
+
+                const dragEnd = () => {
+                    if (!active) return;
+                    active = false;
+                    document.removeEventListener('mousemove', dragMove);
+                    document.removeEventListener('touchmove', dragMove);
+                    document.removeEventListener('mouseup', dragEnd);
+                    document.removeEventListener('touchend', dragEnd);
+                };
+
+                element.addEventListener('mousedown', dragStart);
+                element.addEventListener('touchstart', dragStart, { passive: false });
+            }
+
+
+            // Function to show a popup notification
+            function showPopup(message, isError = false) {
+                popupMessage.textContent = message;
+                popup.className = `fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-xl transition-transform transform-gpu ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+                
+                // Animate in
+                setTimeout(() => {
+                    popup.classList.remove('translate-y-20');
+                }, 10);
+
+                // Animate out after 3 seconds
+                setTimeout(() => {
+                    popup.classList.add('translate-y-20');
+                }, 3000);
+            }
+
+            // --- Event Listeners ---
+
+            // Update preview on any input change
+            [studentNameInput, reportTopicInput, studentPositionSelect, studentClassSelect].forEach(element => {
+                element.addEventListener('input', updatePreview);
+                element.addEventListener('change', updatePreview);
+            });
+            
+            // Handle background selection
+            backgroundSelector.addEventListener('click', (e) => {
+                const target = e.target.closest('div[data-bg-url]');
+                if (!target) return;
+
+                selectedBackground = target.dataset.bgUrl;
+                
+                // Update selection ring style
+                document.querySelectorAll('#background-selector > div').forEach(div => {
+                    div.classList.remove('ring-4', 'ring-blue-500');
+                    div.classList.add('ring-2', 'ring-transparent');
+                });
+                target.classList.add('ring-4', 'ring-blue-500');
+                target.classList.remove('ring-2', 'ring-transparent');
+
+                updatePreview();
+            });
+
+            // Handle download button click
+            downloadBtn.addEventListener('click', () => {
+                loadingIndicator.classList.remove('hidden');
+                
+                html2canvas(previewCover, {
+                    allowTaint: true,
+                    useCORS: true, // Important for external images
+                    scale: 2 // Increase resolution for better quality
+                }).then(canvas => {
+                    const topic = reportTopicInput.value || 'รายงาน';
+                    const name = studentNameInput.value || 'ไม่ระบุชื่อ';
+                    // Create and sanitize the filename
+                    const sanitizedFileName = `${topic}_${name}`.replace(/[\s/\\?%*:|"<>]/g, '_') + '.png';
+
+                    const link = document.createElement('a');
+                    link.download = sanitizedFileName;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    
+                    loadingIndicator.classList.add('hidden');
+                    showPopup('ดาวน์โหลดปกรายงานสำเร็จ!');
+
+                }).catch(err => {
+                    console.error('Error generating image:', err);
+                    loadingIndicator.classList.add('hidden');
+                    showPopup('เกิดข้อผิดพลาดในการดาวน์โหลด', true);
+                });
+            });
+            
+            // --- Initial Setup ---
+            renderBackgrounds();
+            updatePreview();
+            
+            // Make text elements draggable
+            const previewArea = document.getElementById('preview-content-area');
+            const draggableElements = [
+                document.getElementById('draggable-main-header'),
+                document.getElementById('draggable-topic'),
+                document.getElementById('draggable-name'),
+                document.getElementById('draggable-position'),
+                document.getElementById('draggable-class')
+            ];
+            draggableElements.forEach(el => {
+                if(el) makeElementDraggable(el, previewArea);
+            });
+
+        });
+    </script>
+</body>
+</html>
+
