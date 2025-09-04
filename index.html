@@ -199,7 +199,7 @@
                     return;
                 }
                 
-                // Using sheet.best for simplicity and CORS handling, requires setting up a free account
+                // Using the public JSON feed URL for Google Sheets
                  const sheetURL = `https://spreadsheets.google.com/feeds/list/${GOOGLE_SHEET_ID}/od6/public/values?alt=json`;
 
                 try {
@@ -403,4 +403,3 @@
     </script>
 </body>
 </html>
-
