@@ -96,8 +96,9 @@
                         <!-- Background Selector -->
                         <div>
                              <label class="block text-sm font-medium text-gray-700 mb-2">เลือกพื้นหลัง</label>
-                             <div id="background-selector" class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                             <div id="background-selector" class="grid grid-cols-3 sm:grid-cols-4 gap-3 min-h-[75px] border rounded-lg p-2 bg-gray-50">
                                 <!-- Background options will be injected here by JavaScript -->
+                                <p id="bg-loading-msg" class="col-span-full text-center text-gray-500">กำลังโหลดพื้นหลัง...</p>
                              </div>
                         </div>
                     </div>
@@ -108,7 +109,7 @@
                     <!-- Download Button -->
                     <button id="downloadBtn" title="ดาวน์โหลดปกรายงาน" class="absolute top-4 right-4 bg-white text-blue-600 w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-50 hover:scale-110 active:scale-95 transition-transform">
                         <!-- Download Icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
                     </button>
@@ -153,13 +154,19 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // --- CONFIGURATION ---
+            // 1. ใส่ ID ของ Google Sheet ของคุณที่นี่
+            // 2. ตรวจสอบว่าชีตชื่อ 'BgCover' และเผยแพร่เว็บแล้ว
+            const GOOGLE_SHEET_ID = 'YOUR_SHEET_ID_HERE'; 
+
             // --- DOM Elements ---
             const studentNameInput = document.getElementById('studentName');
             const reportTopicInput = document.getElementById('reportTopic');
             const studentPositionSelect = document.getElementById('studentPosition');
             const studentClassSelect = document.getElementById('studentClass');
             const backgroundSelector = document.getElementById('background-selector');
+            const bgLoadingMsg = document.getElementById('bg-loading-msg');
 
             const previewName = document.getElementById('preview-name');
             const previewTopic = document.getElementById('preview-topic');
@@ -172,7 +179,6 @@
             const popup = document.getElementById('popup');
             const popupMessage = document.getElementById('popup-message');
             
-            // New cover type elements
             const frontCoverBtn = document.getElementById('frontCoverBtn');
             const backCoverBtn = document.getElementById('backCoverBtn');
             const frontCoverControls = document.getElementById('frontCoverControls');
@@ -180,26 +186,57 @@
             const draggablePosition = document.getElementById('draggable-position');
             const draggableClass = document.getElementById('draggable-class');
 
-
-            // --- Background Images ---
-            const backgrounds = [
-                { id: 'bg1', thumb: 'https://img2.pic.in.th/pic/-e043b7f73e7e9a45.png', full: 'https://img2.pic.in.th/pic/-e043b7f73e7e9a45.png' },
-                { id: 'bg2', thumb: 'https://img5.pic.in.th/file/secure-sv1/-1e7e989813e4fa1d.png', full: 'https://img5.pic.in.th/file/secure-sv1/-1e7e989813e4fa1d.png' },
-                { id: 'bg3', thumb: 'https://placehold.co/100x150/f87171/ffffff?text=BG+3', full: 'https://images.unsplash.com/photo-1507525428034-b723a9ce6890?q=80&w=2070&auto=format&fit=crop' },
-                { id: 'bg4', thumb: 'https://placehold.co/100x150/fbbf24/ffffff?text=BG+4', full: 'https://images.unsplash.com/photo-1553095066-5014bc7b7f2d?q=80&w=2071&auto=format&fit=crop' },
-                { id: 'bg5', thumb: 'https://placehold.co/100x150/4ade80/ffffff?text=BG+5', full: 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?q=80&w=2070&auto=format&fit=crop' },
-                { id: 'bg6', thumb: 'https://placehold.co/100x150/c084fc/ffffff?text=BG+6', full: 'https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=1920&auto=format&fit=crop' },
-                { id: 'bg7', thumb: 'https://placehold.co/100x150/94a3b8/ffffff?text=BG+7', full: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop' },
-                { id: 'bg8', thumb: 'https://placehold.co/100x150/2dd4bf/ffffff?text=BG+8', full: 'https://images.unsplash.com/photo-1487147264018-f937fba0c817?q=80&w=1935&auto=format&fit=crop' },
-            ];
-            
-            let selectedBackground = backgrounds[0].full;
+            let backgrounds = [];
+            let selectedBackground = '';
 
             // --- Functions ---
+            
+            // Function to fetch background data from Google Sheet
+            async function fetchBackgroundsFromSheet() {
+                if (GOOGLE_SHEET_ID === 'YOUR_SHEET_ID_HERE') {
+                    bgLoadingMsg.textContent = 'กรุณาใส่ Google Sheet ID';
+                    bgLoadingMsg.classList.add('text-red-500');
+                    return;
+                }
+                
+                // Using sheet.best for simplicity and CORS handling, requires setting up a free account
+                 const sheetURL = `https://spreadsheets.google.com/feeds/list/${GOOGLE_SHEET_ID}/od6/public/values?alt=json`;
+
+                try {
+                    const response = await fetch(sheetURL);
+                    if (!response.ok) {
+                        throw new Error(`Network response was not ok: ${response.statusText}`);
+                    }
+                    const data = await response.json();
+                    
+                    const entries = data.feed.entry || [];
+                    backgrounds = entries.map(entry => ({
+                        id: entry.gsx$id?.$t || '',
+                        thumb: entry.gsx$thumb?.$t || '',
+                        full: entry.gsx$full?.$t || ''
+                    })).filter(bg => bg.thumb && bg.full); // Filter out empty rows
+
+                    if (backgrounds.length > 0) {
+                        bgLoadingMsg.style.display = 'none';
+                        selectedBackground = backgrounds[0].full;
+                        renderBackgrounds();
+                        updatePreview();
+                    } else {
+                        throw new Error('ไม่พบข้อมูลพื้นหลัง หรือรูปแบบข้อมูลไม่ถูกต้อง');
+                    }
+
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    bgLoadingMsg.textContent = 'ไม่สามารถโหลดพื้นหลังได้';
+                    bgLoadingMsg.classList.add('text-red-500');
+                    showPopup('ไม่สามารถโหลดข้อมูลพื้นหลังจาก Google Sheet', true);
+                }
+            }
+
 
             // Function to render background choices
             function renderBackgrounds() {
-                backgroundSelector.innerHTML = '';
+                backgroundSelector.innerHTML = ''; // Clear loading message
                 backgrounds.forEach((bg, index) => {
                     const div = document.createElement('div');
                     div.className = `relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${index === 0 ? 'ring-4 ring-blue-500' : 'ring-2 ring-transparent hover:ring-blue-400'}`;
@@ -208,11 +245,9 @@
 
                     const img = document.createElement('img');
                     img.src = bg.thumb;
-                    img.alt = `Background ${index + 1}`;
+                    img.alt = `Background ${bg.id || index + 1}`;
                     img.className = 'w-full h-full object-cover';
-                    // Fallback for placeholder images
                     img.onerror = () => { img.src = 'https://placehold.co/100x150/cccccc/ffffff?text=Error'; };
-
 
                     div.appendChild(img);
                     backgroundSelector.appendChild(div);
@@ -221,14 +256,14 @@
 
             // Function to update the preview
             function updatePreview() {
-                // Update text
                 previewName.textContent = studentNameInput.value || "ชื่อ-สกุล";
                 previewTopic.textContent = reportTopicInput.value || "หัวข้อเรื่อง";
                 previewPosition.textContent = studentPositionSelect.value;
                 previewClass.textContent = studentClassSelect.value;
                 
-                // Update background
-                previewCover.style.backgroundImage = `url('${selectedBackground}')`;
+                if (selectedBackground) {
+                    previewCover.style.backgroundImage = `url('${selectedBackground}')`;
+                }
             }
             
             // Function to make an element draggable
@@ -238,18 +273,6 @@
 
                 const dragStart = (e) => {
                     active = true;
-                    element.classList.remove('transition-all'); // Prevent smooth transition during drag
-                    
-                    const containerRect = container.getBoundingClientRect();
-                    const elemRect = element.getBoundingClientRect();
-                    startLeft = elemRect.left - containerRect.left;
-                    startTop = elemRect.top - containerRect.top;
-                    
-                    element.style.transform = 'none';
-                    element.style.bottom = ''; 
-                    element.style.left = `${startLeft}px`;
-                    element.style.top = `${startTop}px`;
-                    
                     if (e.type === 'touchstart') {
                         startX = e.touches[0].clientX;
                         startY = e.touches[0].clientY;
@@ -257,7 +280,8 @@
                         startX = e.clientX;
                         startY = e.clientY;
                     }
-                    
+                    startLeft = element.offsetLeft;
+                    startTop = element.offsetTop;
                     document.addEventListener('mousemove', dragMove);
                     document.addEventListener('touchmove', dragMove, { passive: false });
                     document.addEventListener('mouseup', dragEnd);
@@ -267,7 +291,6 @@
                 const dragMove = (e) => {
                     if (!active) return;
                     e.preventDefault();
-
                     let currentX, currentY;
                     if (e.type === 'touchmove') {
                         currentX = e.touches[0].clientX;
@@ -276,7 +299,6 @@
                         currentX = e.clientX;
                         currentY = e.clientY;
                     }
-
                     const deltaX = currentX - startX;
                     const deltaY = currentY - startY;
                     let newLeft = startLeft + deltaX;
@@ -290,10 +312,10 @@
                     
                     element.style.left = `${newLeft}px`;
                     element.style.top = `${newTop}px`;
+                    element.style.transform = 'none';
                 };
 
                 const dragEnd = () => {
-                    if (!active) return;
                     active = false;
                     document.removeEventListener('mousemove', dragMove);
                     document.removeEventListener('touchmove', dragMove);
@@ -305,71 +327,42 @@
                 element.addEventListener('touchstart', dragStart, { passive: false });
             }
 
-
             // Function to show a popup notification
             function showPopup(message, isError = false) {
                 popupMessage.textContent = message;
                 popup.className = `fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-xl transition-transform transform-gpu ${isError ? 'bg-red-500' : 'bg-green-500'}`;
-                
-                // Animate in
-                setTimeout(() => {
-                    popup.classList.remove('translate-y-20');
-                }, 10);
-
-                // Animate out after 3 seconds
-                setTimeout(() => {
-                    popup.classList.add('translate-y-20');
-                }, 3000);
+                setTimeout(() => { popup.classList.remove('translate-y-20'); }, 10);
+                setTimeout(() => { popup.classList.add('translate-y-20'); }, 3000);
             }
 
             // --- Event Listeners ---
-
-            // Update preview on any input change
             [studentNameInput, reportTopicInput, studentPositionSelect, studentClassSelect].forEach(element => {
                 element.addEventListener('input', updatePreview);
-                element.addEventListener('change', updatePreview);
             });
             
-            // Handle background selection
             backgroundSelector.addEventListener('click', (e) => {
                 const target = e.target.closest('div[data-bg-url]');
                 if (!target) return;
-
                 selectedBackground = target.dataset.bgUrl;
-                
-                // Update selection ring style
                 document.querySelectorAll('#background-selector > div').forEach(div => {
                     div.classList.remove('ring-4', 'ring-blue-500');
-                    div.classList.add('ring-2', 'ring-transparent');
                 });
                 target.classList.add('ring-4', 'ring-blue-500');
-                target.classList.remove('ring-2', 'ring-transparent');
-
                 updatePreview();
             });
 
-            // Handle download button click
             downloadBtn.addEventListener('click', () => {
                 loadingIndicator.classList.remove('hidden');
-                
-                html2canvas(previewCover, {
-                    allowTaint: true,
-                    useCORS: true, // Important for external images
-                    scale: 2 // Increase resolution for better quality
-                }).then(canvas => {
+                html2canvas(previewCover, { useCORS: true, scale: 2 }).then(canvas => {
                     const topic = reportTopicInput.value || 'รายงาน';
                     const name = studentNameInput.value || 'ไม่ระบุชื่อ';
-                    // Create and sanitize the filename
                     const sanitizedFileName = `${topic}_${name}`.replace(/[\s/\\?%*:|"<>]/g, '_') + '.png';
-
                     const link = document.createElement('a');
                     link.download = sanitizedFileName;
                     link.href = canvas.toDataURL('image/png');
                     link.click();
-                    
                     loadingIndicator.classList.add('hidden');
                     showPopup('ดาวน์โหลดปกรายงานสำเร็จ!');
-
                 }).catch(err => {
                     console.error('Error generating image:', err);
                     loadingIndicator.classList.add('hidden');
@@ -377,15 +370,11 @@
                 });
             });
 
-            // Handle Cover Type switching
             frontCoverBtn.addEventListener('click', () => {
-                // Show front cover elements
-                frontCoverControls.classList.remove('hidden');
-                draggableName.classList.remove('hidden');
-                draggablePosition.classList.remove('hidden');
-                draggableClass.classList.remove('hidden');
-
-                // Update button styles
+                frontCoverControls.style.display = 'block';
+                draggableName.style.display = 'block';
+                draggablePosition.style.display = 'block';
+                draggableClass.style.display = 'block';
                 frontCoverBtn.classList.add('bg-white', 'shadow');
                 frontCoverBtn.classList.remove('bg-transparent');
                 backCoverBtn.classList.add('bg-transparent');
@@ -393,13 +382,10 @@
             });
             
             backCoverBtn.addEventListener('click', () => {
-                 // Hide front cover elements
-                frontCoverControls.classList.add('hidden');
-                draggableName.classList.add('hidden');
-                draggablePosition.classList.add('hidden');
-                draggableClass.classList.add('hidden');
-
-                // Update button styles
+                frontCoverControls.style.display = 'none';
+                draggableName.style.display = 'none';
+                draggablePosition.style.display = 'none';
+                draggableClass.style.display = 'none';
                 backCoverBtn.classList.add('bg-white', 'shadow');
                 backCoverBtn.classList.remove('bg-transparent');
                 frontCoverBtn.classList.add('bg-transparent');
@@ -407,21 +393,12 @@
             });
             
             // --- Initial Setup ---
-            renderBackgrounds();
+            await fetchBackgroundsFromSheet();
             updatePreview();
             
-            // Make text elements draggable
-            const previewArea = document.getElementById('preview-content-area');
-            const draggableElements = [
-                document.getElementById('draggable-topic'),
-                draggableName,
-                draggablePosition,
-                draggableClass
-            ];
-            draggableElements.forEach(el => {
-                if(el) makeElementDraggable(el, previewArea);
+            [draggableName, draggablePosition, draggableClass, document.getElementById('draggable-topic')].forEach(el => {
+                if(el) makeElementDraggable(el, document.getElementById('preview-content-area'));
             });
-
         });
     </script>
 </body>
